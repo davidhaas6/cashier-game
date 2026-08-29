@@ -38,7 +38,6 @@ class GameManager:
 
     def init_event_system(self):
         self.events.subscribe("checkout_started", lambda customer: print(f"{customer.name}'s checkout started."))
-        self.events.subscribe("incorrect_total", lambda: print("Register total rejected."))
         self.events.subscribe("sale_completed", lambda customer, total: print(f"{customer.name} paid ${total/100:.2f}"))
         self.events.subscribe("customer_patience_expired", lambda customer: print(f"{customer.name} left."))
 
@@ -51,7 +50,7 @@ class GameManager:
 
     def checkout(self):
         """
-        Catch-up spawns lose the entire blocked checkout duration and may leave immediately.
+        todo: Catch-up spawns lose the entire blocked checkout duration and may leave immediately.
         """
         if len(self.state.customers) == 0:
             return
@@ -64,8 +63,8 @@ class GameManager:
         total = sum(item.price for item in customer.basket.items)
 
         def incorrect_total():
-            customer.patience -= 0.5
-            self.events.emit("incorrect_total")
+            # customer.patience -= 0.5
+            self.events.emit("incorrect_total", customer=customer)
 
         print('\n')
         print("=*"*20 + "=")

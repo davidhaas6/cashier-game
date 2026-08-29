@@ -7,6 +7,8 @@ class CustomerSystem:
         self.event_bus: EventBus = events
         self.state: GameState = state
 
+        self._init_susbscriptions()
+
     def update(self, dt: float):
         to_remove: list[Customer] = []
         for customer in self.state.customers:
@@ -20,3 +22,10 @@ class CustomerSystem:
         for customer in to_remove:
             self.event_bus.emit("customer_patience_expired", customer=customer)
             self.state.customers.remove(customer)
+
+    def _init_susbscriptions(self):
+        self.event_bus.subscribe("incorrect_total", handle_incorrect_total)
+
+def handle_incorrect_total(customer: Customer):
+    customer.patience -= 0.5
+    print(f"Register total rejected. {customer.name} is losing patience.")
