@@ -14,4 +14,4 @@ class EventBus:
     def emit(self, event_name: str, **data: Any):
         for callback in self.listeners[event_name]:
             callback(**data)
-            print(f"{event_name} - {callback}")
+            # print(f"{event_name} - {callback}")

@@ -25,7 +25,7 @@ class Customer:
     name: str
     description: str
     patience: float
-    state:
+    state: CustomerState
 
 @dataclass
 class GameState:

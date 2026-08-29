@@ -1,4 +1,4 @@
-from src.models import Customer, GameState
+from src.models import Customer, CustomerState, GameState
 from src.events import EventBus
 
 class CustomerSystem:
@@ -10,11 +10,13 @@ class CustomerSystem:
     def update(self, dt: float):
         to_remove: list[Customer] = []
         for customer in self.state.customers:
-            customer.patience -= dt
+
+            if customer.state == CustomerState.WAITING_IN_LINE:
+                customer.patience -= dt
 
             if customer.patience < 0:
                 to_remove.append(customer)
 
         for customer in to_remove:
-            self.event_bus.emit("customer_left", customer=customer)
+            self.event_bus.emit("customer_patience_expired", customer=customer)
             self.state.customers.remove(customer)

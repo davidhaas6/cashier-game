@@ -37,8 +37,10 @@ class GameManager:
 
 
     def init_event_system(self):
-        # self.events.subscribe("new_customer", lambda: self.state.customers.append(create_random_customer()) )
-        pass
+        self.events.subscribe("checkout_started", lambda customer: print(f"{customer.name}'s checkout started."))
+        self.events.subscribe("incorrect_total", lambda: print("Register total rejected."))
+        self.events.subscribe("sale_completed", lambda customer, total: print(f"{customer.name} paid ${total/100:.2f}"))
+        self.events.subscribe("customer_patience_expired", lambda customer: print(f"{customer.name} left."))
 
     def print_customers(self, dt: float, period_s: int=1):
         self.seconds_since_print += dt
@@ -56,18 +58,21 @@ class GameManager:
 
         customer = self.state.customers[0]
         customer.state = CustomerState.CHECKING_OUT
+        self.events.emit("checkout_started", customer=customer) # emit after state update
+
         player_total = -999
         total = sum(item.price for item in customer.basket.items)
 
-        def failure():
+        def incorrect_total():
             customer.patience -= 0.5
-            print("Wrong amount!")
+            self.events.emit("incorrect_total")
 
         print('\n')
         print("=*"*20 + "=")
         print(f'Cash: {self.state.money/100:.2f}\n')
         print(f'{customer.name} - {customer.description}')
         print('='*20)
+
 
         while True:  # emulate do-while
             # todo: in future, need to handle if customer patience runs out during checkout
@@ -80,14 +85,15 @@ class GameManager:
                 player_total = round(player_total*100, 0)
                 if player_total == total:
                     self.state.money += total
+                    self.events.emit("sale_completed", customer=customer, total=total)
                     break
                 else:
-                    failure()
+                    incorrect_total()
             except ValueError as _:
-                failure()
+                incorrect_total()
 
             if customer.patience <= 0:
-                print("Customer left!")
+                self.events.emit("customer_patience_expired", customer=customer)
                 break
         self.state.customers.remove(customer)
 
