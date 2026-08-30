@@ -23,19 +23,16 @@ class SpawnSystem:
 def create_random_customer() -> Customer:
     names = ["Alex", "Sam", "Jordan", "Taylor", "Riley"]
     descriptions = ["in a hurry", "patient", "confused", "chatty", "focused"]
-    items = [
-        Item("apple", 100),
-        Item("bread", 250),
-        Item("milk", 300),
-        Item("eggs", 425),
-        Item("coffee", 200),
-    ]
+    pickup_period = max(0.5,random.gauss(3,1))
 
     return Customer(
         uuid=uuid4().hex,
-        basket=Basket(items=random.sample(items, random.randint(1, 4))),
+        basket=Basket(items=[]),
         name=random.choice(names),
         description=random.choice(descriptions),
-        patience=max(1,random.gauss(4,1)),
-        state=CustomerState.WAITING_IN_LINE
+        patience=max(1,random.gauss(20,4)),
+        state=CustomerState.SHOPPING,
+        target_item_count=random.randint(1,5),
+        item_pickup_period=pickup_period,
+        seconds_until_next_item=pickup_period
     )

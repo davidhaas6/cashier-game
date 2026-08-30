@@ -1,3 +1,4 @@
+from collections import deque
 from enum import Enum, auto
 import random
 from dataclasses import dataclass
@@ -6,7 +7,7 @@ from uuid import uuid4
 class CustomerState(Enum):
     WAITING_IN_LINE = auto()
     CHECKING_OUT = auto()
-    # SHOPPING = auto()
+    SHOPPING = auto()
 
 
 @dataclass
@@ -21,13 +22,19 @@ class Basket:
 @dataclass
 class Customer:
     uuid: str
-    basket: Basket
     name: str
     description: str
     patience: float
     state: CustomerState
 
+    basket: Basket
+    target_item_count: int # end number of items in their cart
+    item_pickup_period: float # number of seconds between item pickup
+    seconds_until_next_item: float
+
 @dataclass
 class GameState:
     customers: list[Customer]
+    checkout_line: deque[str]
     money: int
+    inventory: list[Item]

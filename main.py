@@ -1,21 +1,28 @@
+from collections import deque
 import time
 
 from src.events import EventBus
-from src.models import Customer, CustomerState, GameState
+from src.models import CustomerState, GameState, Item
 from src.systems import CustomerSystem, SpawnSystem
 
 
 class GameManager:
     def __init__(self) -> None:
         self.events: EventBus = EventBus()
-        self.state: GameState = GameState(customers=[], money=0)
-        self.spawner: SpawnSystem = SpawnSystem(self.events, self.state, 3)
+        self.state: GameState = GameState(customers=[], money=0, inventory=[
+            Item("apple", 100),
+            Item("bread", 250),
+            Item("milk", 300),
+            Item("eggs", 425),
+            Item("coffee", 200),
+        ], checkout_line=deque())
+        self.spawner: SpawnSystem = SpawnSystem(self.events, self.state, 4)
         self.customer_system: CustomerSystem = CustomerSystem(self.events, self.state)
         self.seconds_since_print: float = 0
         self.init_event_system()
 
     def loop(self):
-        TICK_RATE_HZ = 30
+        TICK_RATE_HZ = 2
 
         last_time = time.perf_counter()
         while True:
@@ -29,7 +36,7 @@ class GameManager:
             self.customer_system.update(dt_seconds)
             self.advance_state(dt_seconds)
 
-            if len(self.state.customers) > 0:
+            if len(self.state.checkout_line) > 0:
                 self.checkout()
 
             duration_s = time.perf_counter() - start
@@ -45,33 +52,60 @@ class GameManager:
         self.seconds_since_print += dt
 
         if self.seconds_since_print >= period_s:
-            print([(c.uuid[:3],round(c.patience,2)) for c in self.state.customers])
+            line_positions = {
+                customer_id: position
+                for position, customer_id in enumerate(self.state.checkout_line, start=1)
+            }
+
+            print("\n--- Store status ---")
+            print(" | ".join((
+                f"Cash: ${self.state.money / 100:.2f}",
+                f"Customers: {len(self.state.customers)}",
+                f"Checkout line: {len(self.state.checkout_line)}",
+            )))
+
+            if not self.state.customers:
+                print("No customers in the store.")
+
+            for customer in self.state.customers:
+                state = customer.state.name.replace("_", " ").title()
+                basket_total = sum(item.price for item in customer.basket.items)
+                details = (
+                    f"next item: {max(0, customer.seconds_until_next_item):.1f}s"
+                    if customer.state == CustomerState.SHOPPING
+                    else f"line position: {line_positions.get(customer.uuid, '-')}"
+                )
+
+                print(" | ".join((
+                    f"{customer.uuid[:3]}",
+                    f"{customer.name:<6}",
+                    f"{state:<15}",
+                    f"patience: {customer.patience:>5.1f}s",
+                    f"basket: {len(customer.basket.items)}/{customer.target_item_count} (${basket_total / 100:.2f})",
+                    details,
+                )))
+
             self.seconds_since_print = 0
 
     def checkout(self):
         """
         todo: Catch-up spawns lose the entire blocked checkout duration and may leave immediately.
         """
-        if len(self.state.customers) == 0:
+        if  len(self.state.checkout_line) == 0:
             return
 
-        customer = self.state.customers[0]
+        customer_id = self.state.checkout_line.popleft()
+        customer = next(c for c in self.state.customers if c.uuid == customer_id)
         customer.state = CustomerState.CHECKING_OUT
         self.events.emit("checkout_started", customer=customer) # emit after state update
 
         player_total = -999
         total = sum(item.price for item in customer.basket.items)
 
-        def incorrect_total():
-            # customer.patience -= 0.5
-            self.events.emit("incorrect_total", customer=customer)
-
-        print('\n')
         print("=*"*20 + "=")
         print(f'Cash: {self.state.money/100:.2f}\n')
         print(f'{customer.name} - {customer.description}')
         print('='*20)
-
 
         while True:  # emulate do-while
             # todo: in future, need to handle if customer patience runs out during checkout
@@ -87,9 +121,9 @@ class GameManager:
                     self.events.emit("sale_completed", customer=customer, total=total)
                     break
                 else:
-                    incorrect_total()
+                    self.events.emit("incorrect_total", customer=customer)
             except ValueError as _:
-                incorrect_total()
+                self.events.emit("incorrect_total", customer=customer)
 
             if customer.patience <= 0:
                 self.events.emit("customer_patience_expired", customer=customer)
