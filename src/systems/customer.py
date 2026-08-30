@@ -13,28 +13,10 @@ class CustomerSystem:
     def update(self, dt: float):
         to_remove: list[Customer] = []
         for customer in self.state.customers:
-
             if customer.state == CustomerState.SHOPPING:
-                customer.seconds_until_next_item -= dt
-
-                while customer.seconds_until_next_item <= 0:
-                    if len(customer.basket.items) >= customer.target_item_count:
-                        customer.state = CustomerState.WAITING_IN_LINE
-                        self.state.checkout_line.append(customer.uuid)
-                        break
-
-                    item = random.choice(self.state.inventory)
-                    customer.basket.items.append(item)
-                    self.event_bus.emit("customer_added_item", customer=customer, item=item)
-                    customer.seconds_until_next_item += customer.item_pickup_period
-
-                    if len(customer.basket.items) >= customer.target_item_count:
-                        customer.state = CustomerState.WAITING_IN_LINE
-                        self.state.checkout_line.append(customer.uuid)
-                        break
-
-            if customer.state == CustomerState.WAITING_IN_LINE:
-                customer.patience -= dt
+                self._update_shopping_customer(customer, dt)
+            elif customer.state == CustomerState.WAITING_IN_LINE:
+                self._update_waiting_customer(customer, dt)
 
             if customer.patience < 0:
                 to_remove.append(customer)
@@ -43,6 +25,31 @@ class CustomerSystem:
             self.event_bus.emit("customer_patience_expired", customer=customer)
             self.state.customers.remove(customer)
             self.state.checkout_line.remove(customer.uuid)
+
+    def _update_shopping_customer(self, customer: Customer, dt: float) -> None:
+        customer.seconds_until_next_item -= dt
+
+        while customer.seconds_until_next_item <= 0:
+            if len(customer.basket.items) >= customer.target_item_count:
+                self._send_customer_to_checkout_line(customer)
+                break
+
+            item = random.choice(self.state.inventory)
+            customer.basket.items.append(item)
+            self.event_bus.emit("customer_added_item", customer=customer, item=item)
+            customer.seconds_until_next_item += customer.item_pickup_period
+
+            if len(customer.basket.items) >= customer.target_item_count:
+                self._send_customer_to_checkout_line(customer)
+                break
+
+    def _update_waiting_customer(self, customer: Customer, dt: float) -> None:
+        customer.patience -= dt
+
+    def _send_customer_to_checkout_line(self, customer: Customer) -> None:
+        customer.state = CustomerState.WAITING_IN_LINE
+        self.state.checkout_line.append(customer.uuid)
+        self.event_bus.emit("customer_joined_checkout_line", customer=customer)
 
     def _init_susbscriptions(self):
         self.event_bus.subscribe("incorrect_total", handle_incorrect_total)
