@@ -1,13 +1,13 @@
 from collections import deque
-from enum import Enum, auto
-import random
 from dataclasses import dataclass
-from uuid import uuid4
+from enum import Enum, auto
+
 
 class CustomerState(Enum):
     WAITING_IN_LINE = auto()
     CHECKING_OUT = auto()
     SHOPPING = auto()
+
 
 class CheckoutSystemState(Enum):
     WAITING_FOR_CUSTOMER = auto()
@@ -19,9 +19,11 @@ class Item:
     name: str
     price: int
 
+
 @dataclass
 class Basket:
     items: list[Item]
+
 
 @dataclass
 class Customer:
@@ -32,9 +34,10 @@ class Customer:
     state: CustomerState
 
     basket: Basket
-    target_item_count: int # end number of items in their cart
-    item_pickup_period: float # number of seconds between item pickup
+    target_item_count: int  # end number of items in their cart
+    item_pickup_period: float  # number of seconds between item pickup
     seconds_until_next_item: float
+
 
 @dataclass
 class GameState:

@@ -1,8 +1,9 @@
 from collections import defaultdict
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 Listener = Callable[..., None]
+
 
 class EventBus:
     def __init__(self):

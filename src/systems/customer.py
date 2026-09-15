@@ -1,6 +1,8 @@
-from src.models import Customer, CustomerState, GameState
-from src.events import EventBus
 import random
+
+from src.events import EventBus
+from src.models import Customer, CustomerState, GameState
+
 
 class CustomerSystem:
     def __init__(self, events: EventBus, state: GameState) -> None:
@@ -18,7 +20,7 @@ class CustomerSystem:
             elif customer.state == CustomerState.WAITING_IN_LINE:
                 self._update_waiting_customer(customer, dt)
             elif customer.state == CustomerState.CHECKING_OUT:
-                self._update_checking_out_customer(customer,dt)
+                self._update_checking_out_customer(customer, dt)
             if customer.patience <= 0:
                 to_remove.append(customer)
 
@@ -75,7 +77,10 @@ class CustomerSystem:
     def _init_susbscriptions(self):
         self.event_bus.subscribe("incorrect_total", self._handle_incorrect_total)
         self.event_bus.subscribe("sale_completed", self._handle_sale_completed)
-        self.event_bus.subscribe("customer_added_item", lambda customer, item: print(f'{customer.name} added {item.name}'))
+        self.event_bus.subscribe(
+            "customer_added_item",
+            lambda customer, item: print(f"{customer.name} added {item.name}"),
+        )
         self.event_bus.subscribe("checkout_started", handle_start_checkout)
 
 
