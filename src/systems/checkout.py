@@ -23,8 +23,7 @@ class CheckoutSystem:
             self.checkout_state = CheckoutSystemState.ENTERING_TOTAL
             customer.state = CustomerState.CHECKING_OUT
             self.events.emit("checkout_started", customer=customer)
-
-        if self.checkout_state == CheckoutSystemState.ENTERING_TOTAL:
+        elif self.checkout_state == CheckoutSystemState.ENTERING_TOTAL:
             self._update_enter_total_state(player_input)
 
     def _update_enter_total_state(self, player_input: str | None):
