@@ -9,6 +9,10 @@ class CustomerState(Enum):
     CHECKING_OUT = auto()
     SHOPPING = auto()
 
+class CheckoutSystemState(Enum):
+    WAITING_FOR_CUSTOMER = auto()
+    ENTERING_TOTAL = auto()
+
 
 @dataclass
 class Item:
