@@ -67,19 +67,18 @@ class GameManager:
         #     "checkout_started",
         #     lambda customer: print(f"{customer.name}'s checkout started."),
         # )
-        # self.events.subscribe(
-        #     "sale_completed",
-        #     lambda customer, total: print(f"{customer.name} paid ${total / 100:.2f}"),
-        # )
-        # self.events.subscribe(
-        #     "customer_patience_expired",
-        #     lambda customer: print(f"{customer.name} left."),
-        # )
+        self.events.subscribe(
+            "sale_completed",
+            lambda customer, total: print(f"Sale complete! {customer.name}-{customer.uuid[:3]} paid ${total / 100:.2f}"),
+        )
+        self.events.subscribe(
+            "customer_left",
+            lambda customer: print(f"{customer.name}-{customer.uuid[:3]} left."),
+        )
         # self.events.subscribe(
         #     "customer_joined_checkout_line",
         #     lambda customer: print(f"{customer.name} joined the checkout line."),
         # )
-        pass
 
     def print_customers(self, dt: float, period_s: int = 1):
         self.seconds_since_print += dt
@@ -113,8 +112,8 @@ class GameManager:
             return
 
         print(
-            f"\nServing: {customer_checkout.name} [{customer_checkout.uuid[:3]}]"
-            f" - {customer_checkout.description}"
+            f"\nServing: {customer_checkout.name}-{customer_checkout.uuid[:3]}"
+            f" ({customer_checkout.description})"
         )
         print(f"Patience: {customer_checkout.patience:.1f}s")
         print("\nBasket:")

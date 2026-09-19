@@ -77,10 +77,6 @@ class CustomerSystem:
     def _init_susbscriptions(self):
         self.event_bus.subscribe("incorrect_total", self._handle_incorrect_total)
         self.event_bus.subscribe("sale_completed", self._handle_sale_completed)
-        self.event_bus.subscribe(
-            "customer_added_item",
-            lambda customer, item: print(f"{customer.name} added {item.name}"),
-        )
         self.event_bus.subscribe("checkout_started", handle_start_checkout)
 
 

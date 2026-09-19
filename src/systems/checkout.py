@@ -40,8 +40,6 @@ class CheckoutSystem:
             if player_total == total:
                 self.state.money += total
                 self.events.emit("sale_completed", customer=customer, total=total)
-                self._reset_state()
-                return
             else:
                 self.events.emit("incorrect_total", customer=customer)
         except ValueError as _:
