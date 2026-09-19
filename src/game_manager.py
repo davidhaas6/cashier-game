@@ -3,17 +3,18 @@ import time
 from collections import deque
 from queue import Queue
 
+from src.command_dispatcher import CommandDispatcher
 from src.events import EventBus
 from src.input_handler import read
-from src.models import CustomerState, GameState, Item
-from src.systems import CustomerSystem, SpawnSystem
-from src.systems.checkout import CheckoutSystem
+from src.models import CustomerState, GameState, Item, PickupItem
+from src.systems import CustomerSystem, SpawnSystem, CheckoutSystem
 
 
 class GameManager:
     def __init__(self) -> None:
         # core
         self.events: EventBus = EventBus()
+        self.dispatcher: CommandDispatcher = CommandDispatcher()
         self.state: GameState = GameState(
             customers=[],
             money=0,
@@ -29,7 +30,7 @@ class GameManager:
 
         # systems
         self.spawner: SpawnSystem = SpawnSystem(self.events, self.state, 4)
-        self.customer_system: CustomerSystem = CustomerSystem(self.events, self.state)
+        self.customer_system: CustomerSystem = CustomerSystem(self.events, self.state, self.dispatcher)
         self.checkout_system: CheckoutSystem = CheckoutSystem(self.events, self.state)
         self.seconds_since_print: float = 0
 
@@ -39,6 +40,7 @@ class GameManager:
         self.input_thread.start()
 
         self.init_event_system()
+        self.init_command_dispatching()
 
     def loop(self):
         TICK_RATE_HZ = 2
@@ -79,6 +81,9 @@ class GameManager:
         #     "customer_joined_checkout_line",
         #     lambda customer: print(f"{customer.name} joined the checkout line."),
         # )
+
+    def init_command_dispatching(self):
+        self.dispatcher.register(PickupItem, self.customer_system.try_pickup_item)
 
     def print_customers(self, dt: float, period_s: int = 1):
         self.seconds_since_print += dt

@@ -1,5 +1,12 @@
 This is a sandbox for exploring embodied LLM agents in a cash register game setting.
 
+## Run the game and tests
+
+```sh
+uv run main.py
+uv run python -m unittest discover -s tests
+```
+
 # Brainstorming
 
 ## Checkout

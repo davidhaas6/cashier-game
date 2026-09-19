@@ -1,13 +1,17 @@
 import random
 
+from src.command_dispatcher import CommandDispatcher
 from src.events import EventBus
-from src.models import Customer, CustomerState, GameState
+from src.models import Command, Customer, CustomerState, GameState, PickupItem
 
 
 class CustomerSystem:
-    def __init__(self, events: EventBus, state: GameState) -> None:
+    def __init__(
+        self, events: EventBus, state: GameState, dispatcher: CommandDispatcher
+    ) -> None:
         self.sec_since_spawn: float = 0
         self.event_bus: EventBus = events
+        self.dispatcher: CommandDispatcher = dispatcher
         self.state: GameState = state
 
         self._init_susbscriptions()
@@ -50,18 +54,51 @@ class CustomerSystem:
         customer.seconds_until_next_item -= dt
 
         while customer.seconds_until_next_item <= 0:
-            if len(customer.basket.items) >= customer.target_item_count:
-                self._send_customer_to_checkout_line(customer)
-                break
-
             item = random.choice(self.state.inventory)
-            customer.basket.items.append(item)
-            self.event_bus.emit("customer_added_item", customer=customer, item=item)
+            good = self.dispatcher.dispatch(
+                PickupItem(customer_id=customer.uuid, item_id=item.uuid)
+            )
+
+            if not good:
+                raise RuntimeError(
+                    f"Item pickup failed for {customer.name}-{customer.uuid[:3]}"
+                )
             customer.seconds_until_next_item += customer.item_pickup_period
 
-            if len(customer.basket.items) >= customer.target_item_count:
-                self._send_customer_to_checkout_line(customer)
+            if customer.state != CustomerState.SHOPPING:
                 break
+
+    def try_pickup_item(self, command: Command) -> bool:
+        if not isinstance(command, PickupItem):
+            raise TypeError(f"Command of type {type(command)}")
+
+        try:
+            item = next(
+                item for item in self.state.inventory if item.uuid == command.item_id
+            )
+            customer = next(
+                c for c in self.state.customers if c.uuid == command.customer_id
+            )
+        except StopIteration as e:
+            print(e)
+            print(
+                f"Could not find either item {command.item_id} or customer {command.customer_id} "
+            )
+            return False
+
+        if customer.state != CustomerState.SHOPPING:
+            return False
+
+        if len(customer.basket.items) < customer.target_item_count:
+            customer.basket.items.append(item)
+            self.event_bus.emit("customer_added_item", customer=customer, item=item)
+        else:
+            return False
+
+        if len(customer.basket.items) >= customer.target_item_count:
+            self._send_customer_to_checkout_line(customer)
+
+        return True
 
     def _update_waiting_customer(self, customer: Customer, dt: float) -> None:
         customer.patience -= dt

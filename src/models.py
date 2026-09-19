@@ -1,5 +1,6 @@
+import uuid
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 
 
@@ -18,6 +19,7 @@ class CheckoutSystemState(Enum):
 class Item:
     name: str
     price: int
+    uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
 @dataclass
@@ -45,3 +47,13 @@ class GameState:
     checkout_line: deque[str]
     money: int
     inventory: list[Item]
+
+# commands
+
+class Command:
+    pass
+
+@dataclass
+class PickupItem(Command):
+    customer_id: str
+    item_id: str
