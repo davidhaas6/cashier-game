@@ -9,13 +9,24 @@ from src.systems.checkout import CheckoutSystem
 from src.systems.customer import CustomerSystem
 
 
-def make_customer(customer_id, *, patience=100, items=None,
-                  state=CustomerState.WAITING_IN_LINE,
-                  target_item_count=1, pickup_period=3):
+def make_customer(
+    customer_id,
+    *,
+    patience=100,
+    items=None,
+    state=CustomerState.WAITING_IN_LINE,
+    target_item_count=1,
+    pickup_period=3,
+):
     return Customer(
-        uuid=customer_id, name="Sam", description="patient", patience=patience,
-        state=state, basket=Basket([] if items is None else list(items)),
-        target_item_count=target_item_count, item_pickup_period=pickup_period,
+        uuid=customer_id,
+        name="Sam",
+        description="patient",
+        patience=patience,
+        state=state,
+        basket=Basket([] if items is None else list(items)),
+        target_item_count=target_item_count,
+        item_pickup_period=pickup_period,
         seconds_until_next_item=pickup_period,
     )
 
@@ -23,12 +34,15 @@ def make_customer(customer_id, *, patience=100, items=None,
 class CheckoutBehaviorTests(unittest.TestCase):
     def setUp(self):
         self.active = make_customer(
-            "active", items=[Item("apple", 100), Item("bread", 250)],
+            "active",
+            items=[Item("apple", 100), Item("bread", 250)],
         )
         self.next_customer = make_customer("next", items=[Item("milk", 300)])
         self.state = GameState(
             customers=[self.active, self.next_customer],
-            checkout_line=deque(["active", "next"]), money=700, inventory=[],
+            checkout_line=deque(["active", "next"]),
+            money=700,
+            inventory=[],
         )
         self.events = EventBus()
         self.customers = CustomerSystem(self.events, self.state, CommandDispatcher())
@@ -147,11 +161,46 @@ class CheckoutBehaviorTests(unittest.TestCase):
 
 
 class ShoppingBehaviorTests(unittest.TestCase):
+    def test_final_pickup_succeeds_and_repeat_has_no_side_effects(self):
+        existing_item = Item("bread", 250)
+        final_item = Item("apple", 100)
+        customer = make_customer(
+            "shopper",
+            state=CustomerState.SHOPPING,
+            items=[existing_item],
+            target_item_count=2,
+        )
+        state = GameState([customer], deque(), 0, [final_item])
+        events = EventBus()
+        dispatcher = CommandDispatcher()
+        customers = CustomerSystem(events, state, dispatcher)
+        dispatcher.register(PickupItem, customers.try_pickup_item)
+        pickups = []
+        events.subscribe(
+            "customer_added_item",
+            lambda customer, item: pickups.append((customer.uuid, item.uuid)),
+        )
+        command = PickupItem(customer_id=customer.uuid, item_id=final_item.uuid)
+
+        self.assertIs(dispatcher.dispatch(command), True)
+        self.assertEqual(customer.basket.items, [existing_item, final_item])
+        self.assertEqual(customer.state, CustomerState.WAITING_IN_LINE)
+        self.assertEqual(list(state.checkout_line), [customer.uuid])
+        self.assertEqual(pickups, [(customer.uuid, final_item.uuid)])
+
+        self.assertIs(dispatcher.dispatch(command), False)
+        self.assertEqual(customer.basket.items, [existing_item, final_item])
+        self.assertEqual(customer.state, CustomerState.WAITING_IN_LINE)
+        self.assertEqual(list(state.checkout_line), [customer.uuid])
+        self.assertEqual(pickups, [(customer.uuid, final_item.uuid)])
+
     def test_pickup_timing_completes_basket_and_queues_customer_once(self):
         item = Item("apple", 100)
         customer = make_customer(
-            "shopper", state=CustomerState.SHOPPING,
-            target_item_count=4, pickup_period=2,
+            "shopper",
+            state=CustomerState.SHOPPING,
+            target_item_count=4,
+            pickup_period=2,
         )
         state = GameState([customer], deque(), 0, [item])
         dispatcher = CommandDispatcher()

@@ -48,10 +48,13 @@ class GameState:
     money: int
     inventory: list[Item]
 
-# commands
+
+# Commands
+
 
 class Command:
     pass
+
 
 @dataclass
 class PickupItem(Command):

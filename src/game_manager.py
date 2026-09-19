@@ -7,7 +7,7 @@ from src.command_dispatcher import CommandDispatcher
 from src.events import EventBus
 from src.input_handler import read
 from src.models import CustomerState, GameState, Item, PickupItem
-from src.systems import CustomerSystem, SpawnSystem, CheckoutSystem
+from src.systems import CheckoutSystem, CustomerSystem, SpawnSystem
 
 
 class GameManager:
@@ -30,13 +30,17 @@ class GameManager:
 
         # systems
         self.spawner: SpawnSystem = SpawnSystem(self.events, self.state, 4)
-        self.customer_system: CustomerSystem = CustomerSystem(self.events, self.state, self.dispatcher)
+        self.customer_system: CustomerSystem = CustomerSystem(
+            self.events, self.state, self.dispatcher
+        )
         self.checkout_system: CheckoutSystem = CheckoutSystem(self.events, self.state)
         self.seconds_since_print: float = 0
 
         # io
         self.input_queue = Queue[str]()
-        self.input_thread = threading.Thread(target=read,args=(self.input_queue, self.events), daemon=True)
+        self.input_thread = threading.Thread(
+            target=read, args=(self.input_queue, self.events), daemon=True
+        )
         self.input_thread.start()
 
         self.init_event_system()
@@ -51,7 +55,7 @@ class GameManager:
             dt_seconds = start - last_time
             last_time = start
 
-            player_input=None
+            player_input = None
             if not self.input_queue.empty():
                 player_input = self.input_queue.get_nowait()
 
@@ -71,7 +75,9 @@ class GameManager:
         # )
         self.events.subscribe(
             "sale_completed",
-            lambda customer, total: print(f"Sale complete! {customer.name}-{customer.uuid[:3]} paid ${total / 100:.2f}"),
+            lambda customer, total: print(
+                f"Sale complete! {customer.name}-{customer.uuid[:3]} paid ${total / 100:.2f}"
+            ),
         )
         self.events.subscribe(
             "customer_left",
@@ -97,7 +103,8 @@ class GameManager:
         )
         customer_checkout = next(
             (
-                customer for customer in self.state.customers
+                customer
+                for customer in self.state.customers
                 if customer.state == CustomerState.CHECKING_OUT
             ),
             None,
